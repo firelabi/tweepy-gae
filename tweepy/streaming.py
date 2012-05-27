@@ -77,7 +77,7 @@ class Stream(object):
         self.listener = listener
         self.running = False
         self.timeout = options.get("timeout", 60.0)
-        self.retry_count = options.get("retry_count")
+        self.retry_count = options.get("retry_count", 3)
         self.retry_time = options.get("retry_time", 10.0)
         self.snooze_time = options.get("snooze_time",  5.0)
         self.buffer_size = options.get("buffer_size",  1500)
@@ -104,14 +104,14 @@ class Stream(object):
                 break
             try:
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
-                conn = urlfetch.create_rpc()
+                rpc = urlfetch.create_rpc()
                 data = urllib.urlencode(self.parameters)
-                urlfetch.make_fetch_call(conn,
+                urlfetch.make_fetch_call(rpc,
                                          url,
                                          payload=data,
                                          method=urlfetch.POST,
                                          headers=self.headers)
-                resp = conn.get_result()
+                resp = rpc.get_result()
 
                 if resp.status_code != 200:
                     if self.listener.on_error(resp.status_code) is False:
