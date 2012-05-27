@@ -104,7 +104,7 @@ class Stream(object):
                 break
             try:
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
-                conn = urlfetch.create_rpc(deadline=60)
+                conn = urlfetch.create_rpc()
                 data = urllib.urlencode(self.parameters)
                 urlfetch.make_fetch_call(conn,
                                          url,
