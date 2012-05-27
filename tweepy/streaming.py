@@ -2,7 +2,13 @@
 # Copyright 2009-2010 Joshua Roesslein
 # See LICENSE for details.
 
-import httplib
+# This is a customized version for Google App Engine.
+# Try to use "Asynchronous Requests".
+# https://developers.google.com/appengine/docs/python/urlfetch/asynchronousrequests
+
+import urllib
+from google.appengine.api import urlfetch
+
 from socket import timeout
 from threading import Thread
 from time import sleep
@@ -70,7 +76,7 @@ class Stream(object):
         self.auth = auth
         self.listener = listener
         self.running = False
-        self.timeout = options.get("timeout", 300.0)
+        self.timeout = options.get("timeout", 60.0)
         self.retry_count = options.get("retry_count")
         self.retry_time = options.get("retry_time", 10.0)
         self.snooze_time = options.get("snooze_time",  5.0)
@@ -91,24 +97,24 @@ class Stream(object):
 
         # Connect and process the stream
         error_counter = 0
-        conn = None
         exception = None
         while self.running:
             if self.retry_count is not None and error_counter > self.retry_count:
                 # quit if error count greater than retry count
                 break
             try:
-                if self.scheme == "http":
-                    conn = httplib.HTTPConnection(self.host)
-                else:
-                    conn = httplib.HTTPSConnection(self.host)
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
-                conn.connect()
-                conn.sock.settimeout(self.timeout)
-                conn.request('POST', self.url, self.body, headers=self.headers)
-                resp = conn.getresponse()
-                if resp.status != 200:
-                    if self.listener.on_error(resp.status) is False:
+                conn = urlfetch.create_rpc(deadline=60)
+                data = urllib.urlencode(self.parameters)
+                urlfetch.make_fetch_call(conn,
+                                         url,
+                                         payload=data,
+                                         method=urlfetch.POST,
+                                         headers=self.headers)
+                resp = conn.get_result()
+
+                if resp.status_code != 200:
+                    if self.listener.on_error(resp.status_code) is False:
                         break
                     error_counter += 1
                     sleep(self.retry_time)
@@ -120,7 +126,6 @@ class Stream(object):
                     break
                 if self.running is False:
                     break
-                conn.close()
                 sleep(self.snooze_time)
             except Exception, exception:
                 # any other exception is fatal, so kill loop
@@ -128,8 +133,6 @@ class Stream(object):
 
         # cleanup
         self.running = False
-        if conn:
-            conn.close()
 
         if exception:
             raise
