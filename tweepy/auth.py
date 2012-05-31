@@ -2,10 +2,13 @@
 # Copyright 2009-2010 Joshua Roesslein
 # See LICENSE for details.
 
+# Changed oauth lib to oauth2
+# https://github.com/simplegeo/python-oauth2.git
+
 from urllib2 import Request, urlopen
 import base64
 
-from tweepy import oauth
+import oauth2 as oauth
 from tweepy.error import TweepError
 from tweepy.api import API
 
@@ -41,8 +44,8 @@ class OAuthHandler(AuthHandler):
     OAUTH_ROOT = '/oauth/'
 
     def __init__(self, consumer_key, consumer_secret, callback=None, secure=False):
-        self._consumer = oauth.OAuthConsumer(consumer_key, consumer_secret)
-        self._sigmethod = oauth.OAuthSignatureMethod_HMAC_SHA1()
+        self._consumer = oauth.Consumer(consumer_key, consumer_secret)
+        self._sigmethod = oauth.SignatureMethod_HMAC_SHA1()
         self.request_token = None
         self.access_token = None
         self.callback = callback
@@ -58,7 +61,7 @@ class OAuthHandler(AuthHandler):
         return prefix + self.OAUTH_HOST + self.OAUTH_ROOT + endpoint
 
     def apply_auth(self, url, method, headers, parameters):
-        request = oauth.OAuthRequest.from_consumer_and_token(
+        request = oauth.Request.from_consumer_and_token(
             self._consumer, http_url=url, http_method=method,
             token=self.access_token, parameters=parameters
         )
@@ -68,20 +71,20 @@ class OAuthHandler(AuthHandler):
     def _get_request_token(self):
         try:
             url = self._get_oauth_url('request_token')
-            request = oauth.OAuthRequest.from_consumer_and_token(
+            request = oauth.Request.from_consumer_and_token(
                 self._consumer, http_url=url, callback=self.callback
             )
             request.sign_request(self._sigmethod, self._consumer, None)
             resp = urlopen(Request(url, headers=request.to_header()))
-            return oauth.OAuthToken.from_string(resp.read())
+            return oauth.Token.from_string(resp.read())
         except Exception, e:
             raise TweepError(e)
 
     def set_request_token(self, key, secret):
-        self.request_token = oauth.OAuthToken(key, secret)
+        self.request_token = oauth.Token(key, secret)
 
     def set_access_token(self, key, secret):
-        self.access_token = oauth.OAuthToken(key, secret)
+        self.access_token = oauth.Token(key, secret)
 
     def get_authorization_url(self, signin_with_twitter=False):
         """Get the authorization URL to redirect the user"""
@@ -94,7 +97,7 @@ class OAuthHandler(AuthHandler):
                 url = self._get_oauth_url('authenticate')
             else:
                 url = self._get_oauth_url('authorize')
-            request = oauth.OAuthRequest.from_token_and_callback(
+            request = oauth.Request.from_token_and_callback(
                 token=self.request_token, http_url=url
             )
 
@@ -111,7 +114,7 @@ class OAuthHandler(AuthHandler):
             url = self._get_oauth_url('access_token')
 
             # build request
-            request = oauth.OAuthRequest.from_consumer_and_token(
+            request = oauth.Request.from_consumer_and_token(
                 self._consumer,
                 token=self.request_token, http_url=url,
                 verifier=str(verifier)
@@ -120,7 +123,7 @@ class OAuthHandler(AuthHandler):
 
             # send request
             resp = urlopen(Request(url, headers=request.to_header()))
-            self.access_token = oauth.OAuthToken.from_string(resp.read())
+            self.access_token = oauth.Token.from_string(resp.read())
             return self.access_token
         except Exception, e:
             raise TweepError(e)
@@ -134,7 +137,7 @@ class OAuthHandler(AuthHandler):
         """
         try:
             url = self._get_oauth_url('access_token', secure=True) # must use HTTPS
-            request = oauth.OAuthRequest.from_consumer_and_token(
+            request = oauth.Request.from_consumer_and_token(
                 oauth_consumer=self._consumer,
                 http_method='POST', http_url=url,
                 parameters = {
@@ -146,7 +149,7 @@ class OAuthHandler(AuthHandler):
             request.sign_request(self._sigmethod, self._consumer, None)
 
             resp = urlopen(Request(url, data=request.to_postdata()))
-            self.access_token = oauth.OAuthToken.from_string(resp.read())
+            self.access_token = oauth.Token.from_string(resp.read())
             return self.access_token
         except Exception, e:
             raise TweepError(e)
