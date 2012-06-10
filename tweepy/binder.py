@@ -2,7 +2,7 @@
 # Copyright 2009-2010 Joshua Roesslein
 # See LICENSE for details.
 
-import httplib
+from google.appengine.api import urlfetch
 import urllib
 import time
 import re
@@ -106,7 +106,7 @@ def bind_api(**config):
             url = self.api_root + self.path
             if len(self.parameters):
                 url = '%s?%s' % (url, urllib.urlencode(self.parameters))
-
+                            
             # Query the cache if one is available
             # and this request uses a GET method.
             if self.use_cache and self.api.cache and self.method == 'GET':
@@ -128,12 +128,9 @@ def bind_api(**config):
             retries_performed = 0
             while retries_performed < self.retry_count + 1:
                 # Open connection
-                # FIXME: add timeout
-                if self.api.secure:
-                    conn = httplib.HTTPSConnection(self.host)
-                else:
-                    conn = httplib.HTTPConnection(self.host)
-
+                
+                rpc = urlfetch.create_rpc(deadline=10)
+                
                 # Apply authentication
                 if self.api.auth:
                     self.api.auth.apply_auth(
@@ -143,16 +140,21 @@ def bind_api(**config):
 
                 # Execute request
                 try:
-                    conn.request(self.method, url, headers=self.headers, body=self.post_data)
-                    resp = conn.getresponse()
+                    url =self.scheme + self.host + url
+                    urlfetch.make_fetch_call(rpc, 
+                                             url,
+                                             payload=self.post_data,
+                                             method=self.method,
+                                             headers=self.headers)
+                    resp = rpc.get_result()
                 except Exception, e:
                     raise TweepError('Failed to send request: %s' % e)
 
                 # Exit request loop if non-retry error code
                 if self.retry_errors:
-                    if resp.status not in self.retry_errors: break
+                    if resp.status_code not in self.retry_errors: break
                 else:
-                    if resp.status == 200: break
+                    if resp.status_code == 200: break
 
                 # Sleep before retrying request again
                 time.sleep(self.retry_delay)
@@ -160,17 +162,16 @@ def bind_api(**config):
 
             # If an error was returned, throw an exception
             self.api.last_response = resp
-            if resp.status != 200:
+            if resp.status_code != 200:
                 try:
-                    error_msg = self.api.parser.parse_error(resp.read())
+                    error_msg = self.api.parser.parse_error(resp.content)
                 except Exception:
                     error_msg = "Twitter error response: status code = %s" % resp.status
                 raise TweepError(error_msg, resp)
 
             # Parse the response payload
-            result = self.api.parser.parse(self, resp.read())
+            result = self.api.parser.parse(self, resp.content)
 
-            conn.close()
 
             # Store result into cache if one is available.
             if self.use_cache and self.api.cache and self.method == 'GET' and result:
