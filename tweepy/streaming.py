@@ -103,12 +103,12 @@ class Stream(object):
                 # quit if error count greater than retry count
                 break
             try:
+                rpc = urlfetch.create_rpc(deadline=10)
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
-                rpc = urlfetch.create_rpc()
                 data = urllib.urlencode(self.parameters)
                 urlfetch.make_fetch_call(rpc,
-                                         url,
-                                         payload=data,
+                                         self.url,
+                                         payload=self.body,
                                          method=urlfetch.POST,
                                          headers=self.headers)
                 resp = rpc.get_result()
