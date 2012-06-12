@@ -2,7 +2,7 @@
 # Copyright 2009-2010 Joshua Roesslein
 # See LICENSE for details.
 
-from urllib2 import Request, urlopen
+from google.appengine.api import urlfetch
 import base64
 
 from tweepy import oauth
@@ -67,13 +67,19 @@ class OAuthHandler(AuthHandler):
 
     def _get_request_token(self):
         try:
+            rpc = urlfetch.create_rpc(deadline=10)
             url = self._get_oauth_url('request_token')
             request = oauth.OAuthRequest.from_consumer_and_token(
                 self._consumer, http_url=url, callback=self.callback
             )
             request.sign_request(self._sigmethod, self._consumer, None)
-            resp = urlopen(Request(url, headers=request.to_header()))
-            return oauth.OAuthToken.from_string(resp.read())
+            urlfetch.make_fetch_call(rpc, 
+                                     url, 
+                                     headers=request.to_header(), 
+                                     )
+            resp = rpc.get_result()
+#            resp = urlopen(Request(url, headers=request.to_header()))
+            return oauth.OAuthToken.from_string(resp.content)
         except Exception, e:
             raise TweepError(e)
 
@@ -108,6 +114,7 @@ class OAuthHandler(AuthHandler):
         with user supplied verifier.
         """
         try:
+            rpc = urlfetch.create_rpc(deadline=10)
             url = self._get_oauth_url('access_token')
 
             # build request
@@ -119,8 +126,13 @@ class OAuthHandler(AuthHandler):
             request.sign_request(self._sigmethod, self._consumer, self.request_token)
 
             # send request
-            resp = urlopen(Request(url, headers=request.to_header()))
-            self.access_token = oauth.OAuthToken.from_string(resp.read())
+            urlfetch.make_fetch_call(rpc, 
+                                     url, 
+                                     headers=request.to_header(), 
+                                     )
+            resp = rpc.get_result()
+#            resp = urlopen(Request(url, headers=request.to_header()))
+            self.access_token = oauth.OAuthToken.from_string(resp.content)
             return self.access_token
         except Exception, e:
             raise TweepError(e)
@@ -133,6 +145,7 @@ class OAuthHandler(AuthHandler):
         and request activation of xAuth for it.
         """
         try:
+            rpc = urlfetch.create_rpc(deadline=10)
             url = self._get_oauth_url('access_token', secure=True) # must use HTTPS
             request = oauth.OAuthRequest.from_consumer_and_token(
                 oauth_consumer=self._consumer,
@@ -144,9 +157,13 @@ class OAuthHandler(AuthHandler):
                 }
             )
             request.sign_request(self._sigmethod, self._consumer, None)
-
-            resp = urlopen(Request(url, data=request.to_postdata()))
-            self.access_token = oauth.OAuthToken.from_string(resp.read())
+            urlfetch.make_fetch_call(rpc, 
+                                     url, 
+                                     headers=request.to_header(), 
+                                     )
+            resp = rpc.get_result()
+#            resp = urlopen(Request(url, data=request.to_postdata()))
+            self.access_token = oauth.OAuthToken.from_string(resp.content)
             return self.access_token
         except Exception, e:
             raise TweepError(e)
