@@ -105,7 +105,6 @@ class Stream(object):
             try:
                 rpc = urlfetch.create_rpc(deadline=10)
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
-                data = urllib.urlencode(self.parameters)
                 urlfetch.make_fetch_call(rpc,
                                          url,
                                          payload=self.body,
@@ -179,9 +178,10 @@ class Stream(object):
         pass
 
     def userstream(self, count=None, async=False, secure=True):
+        self.parameters = {'delimited': 'length'}
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/2/user.json'
+        self.url = '/2/user.json?delimited=length'
         self.host='userstream.twitter.com'
         if count:
             self.url += '&count=%s' % count
