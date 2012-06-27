@@ -107,7 +107,7 @@ class Stream(object):
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
                 data = urllib.urlencode(self.parameters)
                 urlfetch.make_fetch_call(rpc,
-                                         self.url,
+                                         url,
                                          payload=self.body,
                                          method=urlfetch.POST,
                                          headers=self.headers)
