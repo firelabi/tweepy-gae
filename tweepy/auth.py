@@ -78,7 +78,6 @@ class OAuthHandler(AuthHandler):
                                      headers=request.to_header(), 
                                      )
             resp = rpc.get_result()
-#            resp = urlopen(Request(url, headers=request.to_header()))
             return oauth.OAuthToken.from_string(resp.content)
         except Exception, e:
             raise TweepError(e)
@@ -131,7 +130,6 @@ class OAuthHandler(AuthHandler):
                                      headers=request.to_header(), 
                                      )
             resp = rpc.get_result()
-#            resp = urlopen(Request(url, headers=request.to_header()))
             self.access_token = oauth.OAuthToken.from_string(resp.content)
             return self.access_token
         except Exception, e:
@@ -162,7 +160,6 @@ class OAuthHandler(AuthHandler):
                                      headers=request.to_header(), 
                                      )
             resp = rpc.get_result()
-#            resp = urlopen(Request(url, data=request.to_postdata()))
             self.access_token = oauth.OAuthToken.from_string(resp.content)
             return self.access_token
         except Exception, e:
